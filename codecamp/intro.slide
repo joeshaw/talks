@@ -1,0 +1,610 @@
+Introduction to Go
+
+Columbus Code Camp
+11 October 2014
+
+Joe Shaw
+@joeshaw
+joe@joeshaw.org
+
+
+
+
+* Origin story
+
+Go is a general purpose programming language, created at Google in 2007.
+
+Designed to solve the kinds of problems Google faces
+
+- Large, complex C++ and Java codebases
+# Folklore: "When it takes 45 minutes to compile your program, you have a lot of time to think about what you might do better."
+- Many developers of varying skill levels and codebase familiarity
+- Millions of machines
+- Many millions of users
+
+This is collectively known as "programming in the large."
+
+
+* Upward trend
+
+Go has grown beyond Google, and beyond servers
+
+- Open sourced in 2009, Go 1 (with compatibility guarantee) in 2012
+- Developed entirely in the open
+- Windows a first-class platform, developed by non-Googlers
+- Used by companies like SoundCloud, CloudFlare, Dropbox, GitHub, New York Times
+- Increasingly used in cloud infrastructure: Docker, CoreOS
+- Embedded devices: PayPal Beacon, Gobot, GoDrone
+- GopherCon 2014
+# Community organized, Over 700 attendees
+
+
+* Strengths of Go
+
+- Easy to reason about
+- Statically typed, but quick and fun like a dynamic language
+- Built-in concurrency
+
+
+* Easy to reason about
+# We spend vast majority of our time reading code
+#   - revisiting our own code
+#   - reading open source code
+#   - reading stack overflow
+#   - doing code reviews
+# It takes time and careful study to truly understand code
+# Reduce cognitive overhead, improve reading throughput
+# Truly understand what a language is doing without too much digging
+# There is a lot to gain from a language that is easy to read and understand
+
+
+* Go is an extremely small, simple language
+
+25 keywords
+
+    break        default      func         interface    select
+    case         defer        go           map          struct
+    chan         else         goto         package      switch
+    const        fallthrough  if           range        type
+    continue     for          import       return       var
+
+Source: [[http://golang.org/ref/spec#Keywords]]
+
+
+* Keyword count
+
+Go: 25 keywords
+Python: 31
+C: 32
+Ruby: 43
+PHP: 49
+Java: 50
+C++: 82
+C#: 102
+COBOL: 357
+
+Source: [[http://stackoverflow.com/a/4980785/156]]
+
+
+* C# Example
+
+What does this C# statement do?
+
+    foo.Bar = 42;
+
+
+* C# Example
+
+What does this C# statement do?
+
+    foo.Bar = 42;
+
+It throws an exception:
+
+    class Foo {
+        public int Bar {
+            set { throw new FooledYouException("ha ha!"); }
+        }
+    }
+
+    var foo = new Foo();
+    foo.Bar = 42;
+
+
+* Another example: Swift
+
+From [[http://robnapier.net/go-is-a-shop-built-jig][Go Is a Shop-built Jig]], by Rob Napier:
+
+    func frobulate() -> Result<Void> {
+      var result = success(())
+      if self.thingsToFrobulate > 0 {
+        result = logit(FrobulatingMessage)
+          >>== self.cleanupOldest
+          >>== self.processOld
+          >>== self.doNewThing
+      }
+      return result >>== self.cleanup
+    }
+
+
+* Another example: Go
+
+    func (f *Frobulator) frobulate() error {
+        if f.thingsToFrobulate > 0 {
+            var err error
+
+            if err = logit(FrobulatingMessage); err != nil {
+                return err
+            }
+
+            if err = f.cleanupOldest(); err != nil {
+                return err
+            }
+
+            var youngest Frobable
+            if youngest, err = f.processOld(); err != nil {
+                return err
+            }
+
+            if err = f.doNewThing(youngest); err != nil {
+                return err
+            }
+        }
+
+        return f.cleanup()
+    }
+
+
+* Another example: Go
+
+From [[http://robnapier.net/go-is-a-shop-built-jig][Go Is a Shop-built Jig]], by Rob Napier:
+
+"Go feels under-engineered because it only solves real problems."
+
+
+* Callback hell
+
+Adapted from [[http://stackoverflow.com/a/18229477/156]]
+
+    function handleWithdrawal(req, res) {
+        try {
+            var amount = req.param("amount");
+            db.select("* FROM accounts WHERE user_id=?", req.user_ID), function(err, accountdata) {
+                if (err) throw err;
+                if (accountdata.balance < amount) throw new Error('insufficient funds');
+                db.execute("withdraw(?, ?)", accountdata.ID, req.param("amount"), function(err, data) {
+                    if (err) throw err;
+                    res.write("withdrawal OK, amount: "+ req.param("amount"));
+                    db.select("balance FROM accounts WHERE account_id=?", accountdata.ID, function(err, balance) {
+                        if (err) throw err;
+                        res.end("your current balance is "  + balance.amount);
+                    });
+                });
+            });
+        } catch(err) {
+            res.end("Withdrawal error: "  + err.message);
+        }
+    }
+
+# Does not catch exceptions correctly
+# Tracebacks don't cross callback boundaries, stop at main loop
+
+
+* No callback hell
+
+      func withdrawlHandler(w http.ResponseWriter, r *http.Request) {
+          if err := r.ParseForm(); err != nil {
+              http.Error(w, "Unable to parse form", http.StatusBadRequest)
+              return
+          }
+
+          amount, _ := strconv.ParseInt(r.FormValue("amount"), 0, 64)
+
+          var acctID, balance int64
+          err := db.QueryRow(
+              "SELECT id, balance FROM accounts WHERE user_id = ?",
+              req.FormValue("user_id"),
+          ).Scan(&acctID, &balance)
+
+          if err != nil {
+              http.Error(w, "DB error", http.StatusInternalServerError)
+              return
+          }
+
+          if balance < amount {
+              http.Error(w, "Insufficient funds", http.StatusForbidden)
+              return
+          }
+      ...
+
+
+* No callback hell (cont'd)
+
+    ...
+          if _, err := db.Exec("withdraw(?, ?)", acctID, amount); err != nil {
+              http.Error(w, "DB error", http.StatusInternalServerError)
+              return
+          }
+
+          err = db.QueryRow(
+              "SELECT balance FROM accounts WHERE account_id = ?",
+              acctID,
+          ).Scan(&balance)
+
+          if err != nil {
+              http.Error(w, "DB error", http.StatusInternalServerError)
+              return
+          }
+
+          w.Write([]byte(fmt.Sprintf("your current balance is %d", balance)))
+    }
+
+
+* Easy to reason about
+
+- Straightforward, linear flow of execution
+- Unadorned syntax
+- Simple control structures
+- Errors as values, not exceptions
+
+
+* Statically typed, but quick and fun like a dynamic language
+
+
+* The 90s language dilemma
+
+Java, C#, C++
+
+- Type heavy
+- Tedious and boilerplate-heavy
+- Compilation takes forever
+
+Python, Ruby, Javascript
+
+- Dynamically typed
+- Expressive and fun
+- Easy to get something going
+- Interpreted and very slow compared to compiled languages
+- Runtime errors galore
+
+
+* Other issues
+
+For Java and interpreted languages, runtime startup takes forever
+
+C++ makes you manage your own memory; the other languages abstract you away from memory too much
+
+None of these languages have a good concurrency story
+
+
+* Go: Statically typed
+
+Python:
+
+    a = "hello world"
+    a = 40 # totally ok
+
+Go:
+
+.play assign.go /START OMIT/,/END OMIT/
+
+
+* Go: Little boilerplate
+
+Java:
+
+    class MyFooApp {
+        public static void main(String[] args) {
+            Foo foo = new Foo() // very repetitive
+        }
+    }
+
+Go:
+
+    func main() {
+        foo := Foo{}
+    }
+
+
+* Go: Little boilerplate
+
+No `public` or `private` keywords.
+
+An identifier is exported if its name starts with a capital letter.
+
+.play export1.go /START OMIT/,/END OMIT/
+
+.play export2.go /START OMIT/,/END OMIT/
+
+
+* Go: Multiple return values
+
+Functions can have multiple return values
+
+    func Sincos(x float64) (sin, cos float64)
+
+.play multiplereturns1.go
+
+# First example of full Go program
+
+
+* Go: Multiple return values
+
+This is the foundation of Go's error handling
+
+.play multiplereturns2.go
+
+
+* Go: Error handling
+
+Go does not have exceptions(*).  Errors are handled using return values.
+
+By convention, any function that can fail *must* return `error` as its last argument.
+
+`error` is not a special type to the runtime, it is simply an interface type.
+
+(*) This is kind of a lie, ask me about `panic()` later.
+
+
+* Go: First class functions
+
+.play function1.go /START OMIT/,/END OMIT/
+
+
+* Go: First class functions
+
+Function literals and closures
+
+.play function2.go /START OMIT/,/END OMIT/
+
+
+* Go: Create your own types
+
+You can create your own types from any of the primitive Go types.
+
+    type user struct {
+        Name  string
+        Age   int
+        Email string
+    }
+
+
+* Go: Create your own types
+
+From _any_ of the primitive Go types.
+
+.code methods.go /START AGE OMIT/,/END AGE OMIT/
+
+
+* Go: Methods
+
+You can attach methods to your own types
+
+.code methods.go /START AGE METHOD OMIT/,/END AGE METHOD OMIT/
+
+
+* Go: Methods
+
+.play methods.go /START MAIN OMIT/,/END MAIN OMIT/
+
+
+* Go: Object oriented?
+
+Go does not have classes, and there is no type hierarchy.  It favors _composition_ over _inheritance_.
+
+    type Person struct {
+        Name string
+        Age int
+    }
+
+    type Teacher struct {
+        Person
+        Experience int
+        Subject string
+    }
+
+    type Student struct {
+        Person
+        Grade int
+    }
+
+
+* Go: Interfaces
+
+An interface is a type that defines a set of methods.
+
+From `io` package in standard library:
+
+    type Writer interface {
+        Write(p []byte) (n int, err error)
+    }
+
+    type Closer interface {
+        Close() error
+    }
+
+# Note that these interfaces have one method each.  Common in Go for 2
+# reasons on the next slides.
+
+
+* Go: Interfaces
+
+Interfaces can be composed together to create richer interfaces
+
+    type WriteCloser interface {
+        Writer
+        Closer
+    }
+
+Equivalent to
+
+    type WriteCloser interface {
+        Write(p []byte) (n int, err error)
+        Close() error
+    }
+
+
+* Go: Interfaces
+
+Unlike Java and C#, interfaces are _implicitly_implemented._
+
+.play interfaces.go /START OMIT/,/END OMIT/
+
+
+* Go: Packages
+
+Code is organized into packages
+
+Standard library packages
+
+- `fmt`
+- `io`
+- `net/http`
+
+Third-party packages are referred to by URL
+
+- `code.google.com/p/goprotobuf`
+- `github.com/joeshaw/multierror`
+- `bitbucket.com/liamstask/goose`
+- `gopkg.in/check.v1`
+
+
+* Go: Toolchain
+
+The toolchain is excellent.
+
+Get a package to use in my code
+
+    go get github.com/joeshaw/multierror
+
+Build my project -- no Makefiles!
+
+    go build
+
+Run all the tests for current package and all its subpackages
+
+    go test ./...
+
+Format your Go code to the official style:
+
+    gofmt -w server.go
+
+
+* Go: Compilation
+
+Go compiles to native code.
+
+Output is a single, statically-linked binary.
+
+The Go compiler is extremely fast.
+
+Often faster to compile and execute a Go program than to start up JVM or Ruby runtime.
+
+
+* Concurrency
+
+* Concurrency: Why?
+
+Larger programs can often be thought of as compositions of smaller independent programs.
+
+# Concurrency is about how we structure our programs
+# Examples exist everywhere
+#   - Operating system multitasking
+#   - Microservices as opposed to monolithic server applications
+#   - Users using your service access it concurrently
+
+Many concurrent systems lend themselves to parallelization on multi-core CPUs
+
+[[http://youtu.be/cN_DpYBzKso]["Concurrency is Not Parallelism"]] video on YouTube by Rob Pike
+
+
+* A non-concurrent program
+
+.play concurrency1.go /START OMIT/,/END OMIT/
+
+
+* Goroutines
+
+_Goroutines_ are independent threads of execution, multiplexed onto operating system threads.
+
+- Very lightweight
+# Default Linux stack size is 8 MB
+# Switching between threads requires kernel context switch
+- Linear flow of execution
+# No callback hell like Node example
+- Parallelism across multiple CPU cores
+- Built into the language and runtime
+- Uses event driven syscalls under the hood
+
+It is possible to have hundreds of thousands of goroutines in a single program.
+
+
+* Goroutines
+
+Goroutines are started by prefixing a function call with the keyword `go`.
+
+    go http.Get("http://www.google.com")
+
+
+* Channels
+
+"Do not communicate by sharing memory.  Instead, share memory by communicating."
+
+Concurrent routines need to communicate, this is done with Go's _channels_.
+
+Channels are strongly typed.
+
+    ch := make(chan int)
+
+Sending on a channel
+
+    ch <- 100
+
+Receiving from a channel
+
+    v := <-ch
+
+
+* Channels
+
+Channels are also Go's synchronization primitive.
+
+Channels can be buffered or unbuffered.
+
+If a channel is unbuffered, or its buffer is full, _sending_to_a_channel_blocks_.
+
+If a channel is empty, _receiving_from_a_channel_blocks_.
+
+
+* Channels
+
+.play channel.go /START OMIT/,/END OMIT/
+
+
+* Channels
+
+.play channel2.go /START OMIT/,/END OMIT/
+
+
+* A concurrent dictionary lookup
+
+.code concurrency2.go /START PAGE 1 OMIT/,/END PAGE 1 OMIT/
+
+
+* A concurrent dictionary lookup
+
+.play concurrency2.go /START PAGE 2 OMIT/,/END PAGE 2 OMIT/
+
+
+* Recap
+
+- Easy to reason about
+- Productive language
+- Built-in concurrency
+
+
+* What next?
+
+Learn Go in your browser at [[tour.golang.org]]
+
+Visit the web page at [[golang.org]]
