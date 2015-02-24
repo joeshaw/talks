@@ -1,0 +1,408 @@
+Go for Pythonistas
+
+Central Ohio Python Users Group
+23 February 2015
+
+Joe Shaw
+@joeshaw
+joe@joeshaw.org
+
+
+* Go
+
+Go is a general purpose programming language, created at Google in 2007.
+
+In the years since, Go has grown beyond Google:
+
+- Open sourced in 2009, Go 1 (with compatibility guarantee) in 2012
+- Developed entirely in the open
+- Windows a first-class platform, developed by non-Googlers
+- Used by companies like SoundCloud, CloudFlare, Dropbox, GitHub, New York Times
+- Increasingly used in cloud infrastructure: Docker, CoreOS, Kubernetes
+- Embedded devices: PayPal Beacon, Gobot, GoDrone
+- Several community run conferences
+
+
+* Go
+
+Go is very different than Python:
+
+- Statically typed
+- Compiles to native code
+- Runs substantially faster than Python
+- Garbage collected
+- Concurrency is fundamental to the language
+
+Yet Go maintains an agility usually reserved for dynamic languages.
+
+
+* Go
+
+Although Go was originally meant to replace C, C++, Java it has seen a
+large uptake among Python, Ruby, Node.js programmers.
+
+I believe this is because Go has adopted many of the tenets of the Zen
+of Python.
+
+
+* The Zen of Python
+
+    >>> import this
+    The Zen of Python, by Tim Peters
+
+    Beautiful is better than ugly.
+    Explicit is better than implicit.
+    Simple is better than complex.
+    Complex is better than complicated.
+    Flat is better than nested.
+    Sparse is better than dense.
+    Readability counts.
+    Special cases aren't special enough to break the rules.
+    Although practicality beats purity.
+    Errors should never pass silently.
+    Unless explicitly silenced.
+    In the face of ambiguity, refuse the temptation to guess.
+    There should be one-- and preferably only one --obvious way to do it.
+    Although that way may not be obvious at first unless you're Dutch.
+    Now is better than never.
+    Although never is often better than *right* now.
+    If the implementation is hard to explain, it's a bad idea.
+    If the implementation is easy to explain, it may be a good idea.
+    Namespaces are one honking great idea -- let's do more of those!
+
+
+* "Beautiful is better than ugly."
+
+At first I thought Go was terribly ugly, but it has grown on me.
+
+C-like syntax, except with reasonable ordering.  No more
+
+    char const * const name;
+
+Go code is formatted using a built-in tool, `gofmt`, which ends all
+wars around coding style.
+
+
+* "Beautiful is better than ugly."
+
+Let's build a concurrent web URL fetcher.
+
+Package declarations:
+
+.code fetch.go /START 1 OMIT/,/END 1 OMIT/
+
+
+* "Beautiful is better than ugly."
+
+Code to fetch a URL and save it to a file and report how long it took.
+
+.code fetch.go /START 2 OMIT/,/END 2 OMIT/
+
+
+* "Beautiful is better than ugly."
+
+Fetch 5 sites concurrently and print the results.
+
+.play fetch.go /START 3 OMIT/,/END 3 OMIT/
+
+
+* "Explicit is better than implicit."
+
+(Also, "Errors should never pass silently. Unless explicitly silenced.")
+
+In Go, error handling is very explicit.  No exceptions.
+
+    resp, err := http.Get("http://google.com")
+    if err != nil {
+        // Handle error
+        log.Printf("Unable to fetch: %s", err)
+    }
+
+Without `try` and `except`, flow of code is kept linear.
+
+Uncaught exceptions were the #1 source of bugs in my Python programs.
+
+
+* "Explicit is better than implicit."
+
+With exceptions, any line of code can throw for any reason and it's
+very difficult to reason about code.
+
+What does this block of code do?
+
+    f = Foo()
+    print f.name
+
+It throws an exception.
+
+    class Foo:
+        @property
+        def name(self):
+            raise Exception("You saw this coming, didn't you?")
+
+
+* "Explicit is better than implicit."
+
+Go has very little magic.  No `__getattr__`.  No `**kwargs`.
+
+Reflection is possible in Go, but typically discouraged.
+
+
+* "Simple is better than complex."
+
+Go is a compiled language.  It compiles to a single, statically-linked
+binary.
+
+Cross-compiling for other architectures and operating systems is as
+simple as setting `$GOOS` and `$GOARCH`.
+
+Deployment is as easy as copying the file to your server, client, or
+embedded device.
+
+If you've ever dealt with Python (or Ruby) deployment hell, this is
+*huge*.
+
+
+* "Simple is better than complex."
+
+Go does not have classes.  The composite type in Go, like C, is
+`struct`.
+
+You can create your own types from any of Go's primitive types
+
+    type age int
+
+    type user struct {
+        Name  string
+        Age   age
+        Email string
+    }
+
+Richer functionality is created by composing simpler types together.
+
+
+* "Simple is better than complex."
+Creating your own types allows you to define methods on them.  Methods
+are just functions with a "receiver."
+
+.code methods.go /START AGE OMIT/,/END AGE OMIT/
+
+.play methods.go /START MAIN OMIT/,/END MAIN OMIT/
+
+
+* "Simple is better than complex."
+
+The Go language contains very little boilerplate.
+
+An identifier is exported from a package if its name starts with a capital letter.
+
+    package foo
+
+    // Foo is an exported type
+    type Foo struct {
+        Bar string // exported field
+        baz string // unexported field
+    }
+
+    // Frobnicate is an exported method
+    func (f Foo) Frobnicate() {}
+
+    // quuxificate is an unexported method
+    func (f Foo) quuxificate() {}
+
+Within package `foo`, all types, fields, and methods are accessible.
+Outside of the package, only exported identifiers can be seen.
+
+
+* "Simple is better than complex."
+
+The `go` tool handles building projects, downloading and building
+dependencies.
+
+In most cases, to install a Go package or tool, you simply `go`get`
+it.
+
+    go get golang.org/x/tools/cmd/present
+
+
+* "Flat is better than nested."
+
+Package import paths are structured, but package namespace is flat.
+
+    // A package from the standard library
+    import "net/http"
+
+    // A third-party package, from github
+    import "github.com/joeshaw/customerio"
+
+    ...
+
+    c := customerio.Client{
+        SiteID: "my-site-id",
+        APIKey: "my-api-key",
+        HTTPClient: http.DefaultClient,
+    }
+
+    c.Identify("user1", "customer@example.com", nil)
+
+`customerio` and `http` are package names.  `c` is a value of type
+`customerio.Client`.
+
+
+* "Sparse is better than dense."
+
+For better and for worse, Go is not a functional programming language.
+
+Python:
+
+    def max_col_widths(table):
+        return reduce(lambda v, w: map(max, v, w),
+                      map(lambda x: map(len, x), table))
+
+Go:
+
+    func maxColumnWidths(table [][]string) []int {
+        widths := make([]int, len(table[0]))
+
+        for _, row := range table {
+            for i, col := range row {
+                if len(col) > widths[i] {
+                    widths[i] = len(col)
+                }
+            }
+        }
+
+        return widths
+    }
+
+
+* "Readability counts."
+
+Go was originally written to solve the kinds of problems Google faces:
+
+- Large, complex C++ and Java codebases
+# Folklore: "When it takes 45 minutes to compile your program, you have a lot of time to think about what you might do better."
+- Many developers of varying skill levels and codebase familiarity
+- Millions of machines
+- Many millions of users
+
+This is collectively known as "programming in the large."
+
+Nearly all of the language's design decisions were made to aid in
+readability, lowering cognitive load on the programmer, and allowing
+new people to dive in and contribute quickly.
+
+
+* "Practicality beats purity."
+
+From [[https://al3x.net/2014/09/16/thoughts-on-five-years-of-emerging-languages.html]]:
+
+“Why have you shipped a language in 2010 that seemingly ignores the
+last 30+ years of PLT research?”
+
+Go’s design does seem far more informed by industrial practice than
+academic research. Go asserts that a productive systems language is a
+conservative one. There are few concepts in Go that date more recently
+than the mid-1970s, and the language has continued to maintain a trim
+surface area in subsequent releases.
+
+
+* "There should be one -- and preferably only one -- obvious way to do it."
+
+Python does not adhere to this particularly well.
+
+- `map()` versus list comprehensions
+- `urllib`, `urllib2`, `httplib`
+- StudlyCaps and under_scores
+
+Go does a much better job at this.
+
+
+* "If the implementation is easy to explain, it may be a good idea."
+
+Interfaces in Go are a little bit like interfaces in Java and C# with
+one very big difference:
+
+Interfaces are implemented implicitly.
+
+    type Reader interface {
+        Read(p []byte) (n int, err error)
+    }
+
+*Any* type that implements `Read()` with the signature above
+implements the `io.Reader` interface and can be passed in anywhere an
+`io.Reader` is taken.
+
+You can define interfaces after the fact, a feature that's very useful
+for mocking in tests.
+
+
+* "If the implementation is easy to explain, it may be a good idea."
+
+Remember `io.Copy`?
+
+    io.Copy(f, resp.Body) // Ignoring errors for brevity.  Never do that.
+
+Its definition:
+
+    func Copy(dst io.Writer, src io.Reader) (written int64, err error)
+
+Although `f` is concretely `*os.File`, it implements `io.Writer`.
+
+`resp.Body` is itself an interface, `io.ReadCloser`:
+
+    type ReadCloser interface {
+            Reader
+            Closer
+    }
+
+`ReadCloser` is a composition of the `io.Reader` and `io.Closer`
+interfaces.  Some concrete type underlies `resp.Body`, but we don't
+care what it is.
+
+
+* "If the implementation is easy to explain, it may be a good idea."
+
+Concurrency is built into the language with _goroutines_ and _channels_.
+
+Goroutines are very lightweight, independent threads of execution that
+are multiplexed onto operating system threads.  It is possible (and
+not uncommon) to have thousands of goroutines running in a single
+program.
+
+Goroutines are started by prefixing a function call with the keyword `go`.
+
+    go http.Get("http://www.google.com")
+
+
+* "If the implementation is easy to explain, it may be a good idea."
+
+Concurrently running goroutines may need to communicate.  This is done
+with channels.
+
+Channels are strongly typed.
+
+    ch := make(chan int)
+
+Sending on a channel
+
+    ch <- 100
+
+Receiving from a channel
+
+    v := <-ch
+
+Channels are also Go's synchronization primitive.  Sending to a
+channel blocks until something is ready to receive from it.  Receiving
+from a channel blocks until something sends to it.
+
+* "Now is better than never."
+
+Ask me questions!
+
+Learn more about the language: [[golang.org]]
+
+Take a tour of the language in your browser: [[tour.golang.org]]
+
+You can become productive in Go in days.
+
