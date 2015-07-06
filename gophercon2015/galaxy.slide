@@ -1,0 +1,104 @@
+Galaxy
+Uber, but for Docker Containers
+
+GopherCon
+10 July 2015
+
+Joe Shaw
+@joeshaw
+joe@joeshaw.org
+
+* Galaxy
+
+A Heroku-like micro-PaaS
+
+Ideal for running multiple stateless microservices across a modest
+number (10s to 100s) of hosts.
+
+Minimal dependencies: two Go binaries plus Redis or Consul for
+storage.
+
+Does not attempt to approach the feature set (or complexity) of
+Kubernetes.
+
+* Components
+
+*Commander* - Container deployment and service discovery
+
+*Shuttle* - An HTTP/TCP/UDP reverse proxy configured through an HTTP-based API
+
+* Concepts
+
+*Environment* - A namespace for pools and apps
+
+*Pool* - A set of hosts in a particular environment
+
+*App* - A docker image and associated configuration
+
+*Stack* - A template for creating pools
+
+Apps are created in each environment and then _assigned_ to one or
+more pools.
+
+
+* Demo
+
+* Demo script
+
+    boot2docker up
+    eval $(boot2docker shellinit)
+
+    # Can use redis or consul, we're using redis for simplicity
+    docker run -d --name redis -p 6379:6379 redis
+
+    # Environment variables for Galaxy
+    export GALAXY_REGISTRY_URL=redis://$(boot2docker ip):6379
+    export GALAXY_ENV=local
+    export GALAXY_POOL=web
+
+    # Start shuttle, the HTTP reverse proxy on our host
+    shuttle -http 0.0.0.0:8080
+
+    # Start the commander agent, which handles the containers and
+    # service discovery
+    commander -shuttle-addr 127.0.0.1:9090 -host-ip $(boot2docker ip) agent
+
+    # Create the app
+    commander app:create nginx
+
+* Demo script (cont'd)
+
+    # Deploy the docker image.  First argument is app name, second is
+    # docker image.
+    commander app:deploy nginx nginx:1.7
+
+    # Assign nginx to the pool
+    commander app:assign nginx
+
+    # Look at the shuttle config to see that it's been configured with
+    # nginx
+    curl localhost:9090/_config
+
+    # Hit shuttle, but see that we get a 404 Not Found error.
+    curl localhost:8080
+
+    # This is because no virtual host is set yet and shuttle doesn't
+    # know how to route the request.  Fix that.
+    commander runtime:set -vhost localhost nginx
+    curl localhost:8080
+
+    # We can upgrade the container without any downtime.  This updates
+    # the image from nginx:1.7 to nginx:latest
+    commander app:deploy nginx nginx
+
+* Demo script (cont'd)
+
+    # Now do the same with another app, in the same pool, but with a
+    # different vhost
+    commander app:create ghost
+    commander app:deploy ghost ghost
+    commander runtime:set -vhost localhost.joeshaw.org ghost
+    commander app:assign ghost
+    curl localhost.joeshaw.org:8080
+
+
