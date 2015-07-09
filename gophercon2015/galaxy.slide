@@ -8,7 +8,11 @@ Joe Shaw
 @joeshaw
 joe@joeshaw.org
 
+https://github.com/litl/galaxy
+
 * Galaxy
+
+[[https://github.com/litl/galaxy]]
 
 A Heroku-like micro-PaaS
 
@@ -40,6 +44,33 @@ Kubernetes.
 Apps are created in each environment and then _assigned_ to one or
 more pools.
 
+* Configuration
+
+Two types of configuration
+
+*Application* - Configuration of the app itself via environment variables
+
+    commander config:set AWS_ACCESS_KEY_ID=AKJBKO9P9QQ4SNJI5JXA
+
+*Runtime* - Configuration of the runtime environment
+
+    commander runtime:set -vhost foo.example.com some_app
+
+* Example
+
+    $ commander app
+
+    NAME            ENV    VERSION                                   IMAGE ID      CONFIG  POOLS
+    polecat         prod   registry.example.com/polecat:20150608.1   017bd19c3d87  20      rfmweb
+    seymour         prod   registry.example.com/seymour:20150604.1   566a90c7db98  14      rfmweb
+    apiary          prod   registry.example.com/apiary:20150626.1    25e28ca4368a  86      rfmweb
+    polecat         stage  registry.example.com/polecat:20150608.1   017bd19c3d87  43      rfmweb
+    seymour         stage  registry.example.com/seymour:20150604.1   566a90c7db98  40      rfmweb
+    apiary          stage  registry.example.com/apiary:20150626.1    25e28ca4368a  272     rfmweb
+    polecat         dev    registry.example.com/polecat:latest       3ff4287a18bb  166     rfmweb
+    seymour         dev    registry.example.com/seymour:latest       80ffb6c81b8c  95      rfmweb
+    apiary          dev    registry.example.com/apiary:latest        2c1cca379181  1486    rfmweb
+    marten_         dev    registry.example.com/marten:20150417.1    4b43d65fcb25  10      marten
 
 * Demo
 
