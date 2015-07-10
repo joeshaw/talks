@@ -8,7 +8,8 @@ Joe Shaw
 @joeshaw
 joe@joeshaw.org
 
-https://github.com/litl/galaxy
+GitHub: https://github.com/litl/galaxy
+Slides: http://bit.ly/1RoCl9J
 
 * Galaxy
 
@@ -38,8 +39,6 @@ Kubernetes.
 *Pool* - A set of hosts in a particular environment
 
 *App* - A docker image and associated configuration
-
-*Stack* - A template for creating pools
 
 Apps are created in each environment and then _assigned_ to one or
 more pools.
