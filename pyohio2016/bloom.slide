@@ -1,0 +1,116 @@
+Bloom filters
+
+PyOhio Lightning Talk
+31 July 2016
+
+Joe Shaw
+@joeshaw
+joe@joeshaw.org
+
+
+* Bloom filters
+
+Data structure for checking presence of data in a set.
+
+Inserts: Constant time
+Lookups: Constant time
+Extremely space efficient
+
+It works through the magic of hashing
+
+Downsides: does not contain the data, can't really delete
+
+
+* Probablistic data structure
+
+If it returns false, it definitely doesn't contain the data
+
+If it returns true, it probably contains the data but it might not (false positives)
+
+
+* How it works
+
+Two knobs: number of hash functions, number of hash buckets
+
+Given a piece of data, hash it using each hash function.  Take each hash value, modulo it by number of hash buckets.
+
+    n_buckets = 10
+    h1 = lambda d: hash1(d) % n_buckets
+    h2 = lambda d: hash2(d) % n_buckets
+    h3 = lambda d: hash3(d) % n_buckets
+
+Each bucket is only one bit!  You can fit 8,388,608 buckets in 1 MB of space.
+
+To add, set the bit for each hash function to true.
+
+To look up, check if each hash function's bucket value is true.
+
+
+* Add "foo"
+
+    0  1  2  3  4  5  6  7  8  9
+    ----------------------------
+    0  0  0  0  0  0  0  0  0  0
+
+Add it:
+
+    h1('foo') = 4
+    h2('foo') = 6
+    h3('foo') = 2
+
+    0  1  2  3  4  5  6  7  8  9
+    ----------------------------
+    0  0  1  0  1  0  1  0  0  0
+
+
+* Lookup "bar"
+
+    0  1  2  3  4  5  6  7  8  9
+    ----------------------------
+    0  0  1  0  1  0  1  0  0  0
+
+    h1('bar') = 2
+    h2('bar') = 5
+    h3('bar') = 3
+
+Look in each bucket.  Bucket 2 is true, but buckets 5 and 3 are false, so lookup returns false.
+
+
+* Add "baz"
+
+    0  1  2  3  4  5  6  7  8  9
+    ----------------------------
+    0  0  1  0  1  0  1  0  0  0
+
+Add it:
+
+    h1('baz') = 1
+    h2('baz') = 3
+    h3('baz') = 5
+
+    0  1  2  3  4  5  6  7  8  9
+    ----------------------------
+    0  1  1  1  1  1  0  0  0  0
+
+
+* Lookup "bar"
+
+    0  1  2  3  4  5  6  7  8  9
+    ----------------------------
+    0  1  1  1  1  1  0  0  0  0
+
+    h1('bar') = 2
+    h2('bar') = 5
+    h3('bar') = 3
+
+Look in each bucket again.  Now it returns true, because buckets 2, 3, and 5 are all true, even though it wasn't explicitly added.
+
+
+* Python bloom filters
+
+Pybloom by Jay Baird
+[[https://github.com/jaybaird/python-bloomfilter]]
+[[https://pypi.python.org/pypi/pybloom/1.1]]
+
+Tutorial on writing one by Max Burstein
+[[http://www.maxburstein.com/blog/creating-a-simple-bloom-filter/]]

@@ -12,3 +12,7 @@ Slides from talks I have given.
   - [Slide source](https://github.com/joeshaw/talks/tree/master/gophercon2015)
   - [Online slides](https://go-talks.appspot.com/github.com/joeshaw/talks/gophercon2015/galaxy.slide#1)
   - [Video](https://www.youtube.com/watch?v=t9-LnQFwQUA&index=17&list=PL2ntRZ1ySWBeHqlHM8DmvS8axgbrpvF9b)
+
+* 2016 [PyOhio](http://pyohio.org) lightning talk about bloom filters
+  - [Slide source](https://github.com/joeshaw/talks/tree/master/pyohio2016)
+  - [Online slides](https://go-talks.appspot.com/github.com/joeshaw/talks/pyohio2016/bloom.slide#1)
