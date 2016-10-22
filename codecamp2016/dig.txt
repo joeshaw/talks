@@ -1,0 +1,11 @@
+$ dig A www.cnn.com
+
+;; QUESTION SECTION:
+;www.cnn.com.                       IN  A
+
+;; ANSWER SECTION:
+www.cnn.com.                  136   IN  CNAME  turner.map.fastly.net.
+turner.map.fastly.net.        1470  IN  CNAME  prod.turner.map.fastlylb.net.
+prod.turner.map.fastlylb.net. 6     IN  A      151.101.44.73
+
+;; Query time: 39 msec // HLquery

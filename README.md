@@ -16,3 +16,7 @@ Slides from talks I have given.
 * 2016 [PyOhio](http://pyohio.org) lightning talk about bloom filters
   - [Slide source](https://github.com/joeshaw/talks/tree/master/pyohio2016)
   - [Online slides](https://go-talks.appspot.com/github.com/joeshaw/talks/pyohio2016/bloom.slide#1)
+
+* 2016 [Columbus Code Camp](http://columbuscodecamp.com)
+  - [Slide source](https://github.com/joeshaw/talks/tree/master/codecamp2016)
+  - [Online slides](https://go-talks.appspot.com/github.com/joeshaw/talks/codecamp2016/concurrency.slide#1)

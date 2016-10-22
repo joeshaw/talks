@@ -1,0 +1,466 @@
+Concurrency in Go
+
+Columbus Code Camp
+22 October 2016
+
+Joe Shaw
+@joeshaw
+joe@joeshaw.org
+
+
+* Concurrency
+
+Concurrency is the ability to handle multiple things at once.
+
+Examples exist everywhere
+
+- Operating system multitasking
+- Microservices as opposed to monolithic server applications
+- Users on your site accessing it concurrently
+
+Programs can often be thought of as compositions of smaller independent programs.
+
+: Concurrency is about how we structure our programs
+
+
+* Concurrency vs. parallelism
+
+Parallelism is doing multiple things at once.
+
+Many concurrent systems lend themselves to parallelization on multi-core CPUs
+
+[[http://youtu.be/cN_DpYBzKso]["Concurrency is Not Parallelism"]] video on YouTube by Rob Pike
+
+: Concurrency is the ability to handle multiple things at once.
+: These are related, but separate concepts.
+: You can have concurrent systems without them being parallel.  OS multitasking example again
+
+
+* Concurrency: History
+
+Go's concurrency is based on 1978 paper by Tony Hoare, [[http://fi.ort.edu.uy/innovaportal/file/20124/1/55-hoare_csp_old_article.pdf][_Communicating_Sequential_Processes_]].
+
+Processes are separated, independent units of execution.
+
+Processes coordinate among themselves by sending messages through channels.
+
+: Input and output commands on the channels.
+: These commands must be paired, or the communication blocks
+: CSP also underlies Erlang's concurrency.
+
+
+* Concurrency in Go: Goroutines
+
+_Goroutines_ are independently running functions.
+
+They are a little bit like threads, except:
+
+- Live entirely within the Go runtime
+- Very lightweight to create and destroy
+- Have very small stacks that grow as needed
+
+Lightweight enough to run thousands within a single program.
+
+Goroutines are multiplexed onto operating system threads by the Go runtime.
+
+: Goroutines are cheap, but not free.
+: Stacks are 2k initially
+: Because they are so inexpensive, and because they're built into the language, they're used extensively in the standard library.  Ie, every incoming request to the production-quality HTTP server is handled in its own goroutine
+: Go defaults to one thread per processor for multiplexing Goroutines
+
+
+* Concurrency in Go: Goroutines
+
+Goroutines are started by prefixing a function call with the keyword `go`.
+
+    go fmt.Println("Hello world!")
+
+: But this example is not very useful, because more often than not goroutines need to communicate and coordinate...
+
+
+* Concurrency in Go: Channels
+
+Goroutines often need to communicate, this is done with _channels_.
+
+"Do not communicate by sharing memory.  Instead, share memory by communicating."
+
+
+* Concurrency in Go: Channels
+
+Channels are also Go's primary synchronization primitive.
+
+Channels can be buffered or unbuffered.
+
+If a channel is unbuffered, or its buffer is full, _sending_to_a_channel_blocks_.
+
+If a channel is empty, _receiving_from_a_channel_blocks_.
+
+Thus, sends (on an unbuffered or full channel) and receives _must_be_paired_together_ to advance flow.
+
+: Buffered channels just allow senders to send a certain number of values before it starts blocking
+
+
+* Concurrency in Go: Channels
+
+.image blocking-channels.png
+
+: On the left, Goroutine 1 blocks on a channel send until Goroutine 2 can receive it.  Then execution proceeds.
+: On the right, Goroutine 2 block on a channel receive until Goroutine 1 can sent it.
+
+
+* Concurrency in Go: Aside about blocking
+
+In some languages, blocking is a bad word.
+
+Thanks to goroutines and channels, blocking in Go is a good thing!
+
+Goroutines enable a _linear_flow_of_execution_.
+
+Need to do something slow? Kick off a goroutine and coordinate later with a channel.
+
+: Talking about Node.js here
+: Blocking is bad because there is only one thread of execution
+: Would-be blocking operations have to be handed off to an event loop
+
+
+* Concurrency in Go: Channels
+
+Channels are strongly typed values.
+
+    ch := make(chan int)
+
+Sending on a channel
+
+    ch <- 100
+
+Receiving from a channel
+
+    v := <-ch
+
+
+* Concurrency in Go: Channels
+
+Looping over values in a channel
+
+    for x := range ch { ... }
+
+The loop exits when the channel has been closed and drained.
+
+If the channel is open, the loop blocks until there is a value to read.
+
+
+* Concurrency in Go: Channels
+
+Selecting from multiple channels
+
+    select {
+    case v1 := <-ch1:
+        // Do something with v1
+
+    case v2 := <-ch2:
+        // Do something with v2
+
+    case ch3 <- 100:
+        // Send a value on ch3
+
+    default:
+        // Do something if none of the channels are ready
+    }
+
+If no `default` case, block until one is ready.
+
+: If multiple cases are ready, Go runtime selects one pseudo-randomly
+
+
+* Concurrency in Go: sync
+
+The `sync` package contains other useful synchronization tools.
+
+- `sync.WaitGroup`
+
+Used to wait for a group of goroutines to finish.
+
+- `sync.Mutex` and `sync.RWMutex`
+
+Mutual exclusion locks.  Useful for shared resources like maps.
+
+- `sync.Once`
+
+Ensures that a function only ever runs once
+
+- `sync/atomic` package
+
+Atomic integer operations
+
+
+* Concurrency in action
+
+The problem: How many of the top 1 million web sites use Fastly?
+
+    google.com
+    youtube.com
+    facebook.com
+    baidu.com
+    yahoo.com
+    wikipedia.org
+    ...
+
+Check DNS for CNAMEs pointing to hostnames containing the string "fastly"
+
+.code dig.txt
+
+
+* Concurrency in action
+
+Naive, non-concurrent first attempt
+
+.code dns.go /BEGIN 1 OMIT/,/END 1 OMIT/
+
+(cont'd.)
+
+
+* Concurrency in action
+
+Naive, non-concurrent first attempt
+
+.code dns.go /BEGIN 2 OMIT/,/END 2 OMIT/
+
+(cont'd.)
+
+
+* Concurrency in action
+
+Naive, non-concurrent first attempt
+
+.play dns.go /BEGIN 3 OMIT/,/END 3 OMIT/
+
+
+* Concurrency in action
+
+Reads the file one line at a time, calls DNS, waits for a response.
+
+.code dig.txt HLquery
+
+Approximately 39ms per DNS query.  For up to 2 million DNS queries:
+
+    39ms * 2,000,000 ≈ 22 hours
+
+
+* Concurrency in action
+
+Spray some goroutines on it?
+
+.code dns2.go /BEGIN OMIT/,/END OMIT/
+
+: There are several problems with this code.
+:   - One goroutine per line: 1m * 2k stack = 2g mem usage; goroutines are cheap but not free
+:   - 1m goroutines probably overloads constrained resources (network)
+:   - Main goroutine doesn't wait and exits
+:   - Printing to stdout not synchronized
+:   - Not a concurrent program
+
+
+* Concurrency in action
+
+Break down our problem into three concurrent sub-tasks
+
+.image dns-concurrent.png
+
+
+* Concurrency in action
+
+Reading in hostnames
+
+.code dns3.go /BEGIN 1 OMIT/,/END 1 OMIT/
+
+: This function will run until all the hostnames have been read from the file.
+
+
+* Concurrency in action
+
+DNS lookups
+
+.code dns3.go /BEGIN 2 OMIT/,/END 2 OMIT/
+
+: This function will run until the input channel is closed.
+
+
+* Concurrency in action
+
+Write out matches
+
+.code dns3.go /BEGIN 3 OMIT/,/END 3 OMIT/
+
+: This function will run until the output channel is closed.
+
+
+* Concurrency in action
+
+Tying it all together
+
+.play dns3.go /BEGIN 4 OMIT/,/END 4 OMIT/
+
+: Consuming all the lines of the file is what allows readHostnames() to terminate
+: Closing the input channel is what allows lookupHostnames() to terminate
+: Closing the output channel is what allows outputFastlyHostnames() and our program to terminate
+: We now have a program with three concurrently running sub-tasks, each running in their own goroutines and coordinating work via channels!
+: But this program isn't any faster, because we're still just doing one DNS lookup at a time.
+
+
+* Concurrency in action
+
+Now we can scale up the DNS lookups.
+
+.image dns-concurrent-parallel.png
+
+: With these multiple goroutines, we can concurrently do 200 lookups
+: Most of those 39ms are sleeping waiting on the network, so the Go runtime can schedule and run them efficiently
+: Even with a single processor, single core machine this is substantially faster
+
+
+* Concurrency in action
+
+.play dns4.go /BEGIN OMIT/,/END OMIT/
+
+: You can't send to a closed channel, and you can't close a channel more than once
+: We have to coordinate closing of the output channel once all the workers are done
+: We could use a channel for that, but I like sync.WaitGroup for this.
+
+
+* Concurrency in action
+
+We've transformed a slow, sequential program into a fast, concurrent one.
+
+We are better able to utilize our system's resources.
+
+Time to run drops from roughly 22 hours to just over 5.
+
+Number of Fastly-hosted sites?  2,461 out of 1,000,000, and 165 of top 10,000.
+
+: By introducing concurrency, we have a better software design, comprised of coordinating but separate, composable pieces.
+: As you become more familiar with Go and its concurrency, you start seeing all kinds of problems this way
+
+
+* A cache example
+
+.image cdn.png _ 500
+
+
+* A cache example
+
+Requests come into our front-end server.
+
+We query replicated cache servers to get the data as quickly as possible.
+
+Strict SLA: if no cached data comes back in 50ms, go to the origin.
+
+For simplicity we're ignoring errors and assume the cache always has a copy of the data.
+
+
+* A cache example
+
+Let's define types for our cache implementation.
+
+    type frontend struct {
+        caches []backend
+        origin backend
+    }
+
+    type backend interface {
+         query(key string) result
+    }
+
+    type result struct {
+        data []byte
+        err error // TODO: error handling
+    }
+
+
+* A cache example
+
+    func (fe *frontend) handleRequest(key string) result {
+        ch := make(chan result, 1)
+        for i := range fe.caches {
+            go queryCache(fe.caches[i], key, ch)
+        }
+
+        select {
+        case r := <-ch:
+            return r // TODO: check for errors
+        case <-time.After(50 * time.Millisecond):
+            r := fe.origin.query(key) // TODO: add result to the cache
+            return r
+        }
+    }
+
+    func queryCache(b backend, key string, ch chan<- result) {
+        r := b.query(key)
+        select {
+        case ch <- r:
+            // Do nothing; value is sent
+        default:
+            // Writing to channel would block, another goroutine already handled it
+        }
+    }
+
+: The channel has a buffer of 1, which is important when describing queryCache()
+: The first select doesn't have a default case, so it will block until one of those cases is ready
+: Think about the languages you understand well, and how might you implement a timeout
+: All our backends *will* return a result, but we only ever care about the first (fastest) one
+: The second select lets us write one value without blocking (why channel is buffered), all others silently discarded
+: All of this is done with minimal coordination, zero explicit locking or cleanup.
+
+
+* But sometimes all you need is a mutex
+
+Go's maps are not safe for concurrent access
+
+We could implement concurrent access to a map using channels and goroutines, but it's a lot of code.
+
+All we need is a mutex.
+
+    type ConcurrentMap struct {
+        sync.Mutex
+        m map[string]int
+
+    }
+
+Lock and unlock the mutex when you need to access it.
+
+    func DoSomething(cm *ConcurrentMap) {
+        cm.Lock()
+        defer cm.Unlock()
+
+        cm.m["foo"] = 55
+    }
+
+: Channels are all well and good, but don't overuse them.
+
+
+* Conclusion
+
+Looking for attendees and sponsors for a *Columbus*Go*meetup*.
+
+Interested? Talk to me, email joe@joeshaw.org, or tweet @joeshaw.
+
+*Links*
+
+The Go Tour -- learn Go in your browser!
+
+.link https://tour.golang.org
+
+_Communicating_Sequential_Processes_ paper by Tony Hoare
+
+.link http://bit.ly/2dpETBV
+
+"Concurrency is Not Parallelism" video by Rob Pike
+
+.link http://youtu.be/cN_DpYBzKso
+
+"Go Concurrency Patterns" posts on the Go blog
+
+.link https://blog.golang.org/index
+
+: Concurrent programs are easily expressible in Go
+: Go's concurrency primitives greatly simplify otherwise complex concurrent problems
+: And it's fun to write these kinds of programs and see the wins that you get
