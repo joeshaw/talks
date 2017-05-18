@@ -1,0 +1,380 @@
+Columbus Go Meetup Kickoff
+
+GDG Columbus
+18 May 2017
+
+Joe Shaw
+@joeshaw
+joe@joeshaw.org
+
+
+* Columbus Go Meetup
+
+Let's build a community of Gophers in Central Ohio!
+
+- Meetup: [[http://columbusgolang.org]]
+- Twitter: [[https://twitter.com/columbusgolang][@columbusgolang]] and [[https://twitter.com/search?q=%23golang][#golang]]
+- Slack: #go in [[https://techlife-columbus-slack.herokuapp.com/][Techlife Columbus Slack]] and #ohio in [[https://invite.slack.golangbridge.org/][Gophers Slack]]
+
+Speakers
+
+- Talk about your journey to Go, or an interesting project you came across
+- Great way to get more public speaking experience
+
+Sponsors
+
+- Venues; Food and drink; Overhead costs
+- Recruit passionate engineers
+
+: Point of emphasis: No previous Go experience is necessary!
+
+
+* Cognitive overhead
+
+
+* Cognitive overhead
+
+"The additional effort and concentration necessary to maintain several
+tasks or trails at one time." -- Jeff Conklin, [[https://www.researchgate.net/profile/Jeff_Conklin/publication/2607118_A_Survey_of_Hypertext/links/56411fdc08aec448fa606a26.pdf][_A_Survey_of_Hypertext_]], 1987
+
+: "How many logical connections or jumps your brain has to make in order to understand or contextualize the thing you’re looking at." -- David Demaree
+
+: How much stuff you have to hold in your brain at a time to get something done
+
+
+* Background
+
+Created at Google in 2007 by Ken Thompson, Rob Pike, and Robert Griesemer.
+
+Open sourced in 2009, first stable release with compatibility guarantees (Go 1) in 2012.
+
+Designed to solve the kinds of problems Google faces
+
+- Large, complex C++ and Java codebases
+- Many developers of varying skill levels and codebase familiarity
+- Millions of machines and CPU cores
+- Billions of users
+
+This is collectively known as "programming in the large."
+
+: "When it takes 45 minutes to compile your program, you have a lot of time to think about what you might do better."
+
+
+* Principles
+
+- Reduced complexity
+- Composition over inheritance
+- Safety
+- Concurrency
+
+In combination these lead to code that is understandable and maintainable, while taking advantage of contemporary scale.
+
+
+* Reduced complexity
+
+We spend the vast majority of our time reading code.
+
+: Revisiting our own code
+: Reading open source code
+: Looking for answers on Stack Overflow
+: Doing code reviews
+
+Go is optimized for readability.
+
+: It takes time and careful study to truly understand code.
+: Reduce cognitive overhead, improve comprehension and throughput
+
+
+* Reduced complexity
+
+Go was not based on existing languages, but built from scratch as a
+reaction to the complexity of C++.
+
+: It adopted elements of C, though, another small language.  This is not a surprise given the context of the creators' backgrounds
+: Conversely, C# was clearly starting from Java, for example.
+
+This leads to different thinking from contemporary languages in key areas:
+
+- Limited syntax
+- Error handling
+- Classical type system (or lack thereof)
+- Memory management
+- Concurrency
+
+
+* Limited syntax
+
+25 keywords
+
+    break        default      func         interface    select
+    case         defer        go           map          struct
+    chan         else         goto         package      switch
+    const        fallthrough  if           range        type
+    continue     for          import       return       var
+
+Source: [[http://golang.org/ref/spec#Keywords]]
+
+: Noteworthy:
+: Only one loop construct: for
+: Three conditional control structures: if-else, switch, select
+: Three concurrency keywords: go, chan, select
+
+
+* Limited syntax
+
+Go: 25 keywords
+Python: 31
+C: 32
+Ruby: 43
+PHP: 49
+Java: 50
+JavaScript: 63
+C++: 82
+C#: 102
+COBOL: 357
+
+Source: [[http://stackoverflow.com/a/4980785/156]]
+
+
+* Error handling: C# example
+
+What does this C# code do?
+
+    var foo = new Foo()
+    foo.Bar = 42
+
+
+* Error handling: C# example
+
+What does this C# code do?
+
+    var foo = new Foo()
+    foo.Bar = 42
+
+It throws an exception:
+
+    class Foo {
+        public int Bar {
+            set { throw new FooledYouException("ha ha!"); }
+        }
+    }
+
+: Obviously contrived. I thought it'd be bad practice to throw from a setter, but Microsoft says it's ok!
+: The code is easily readable and appears simple, but in reality it's impossible to reason about on its surface because of the potential complexity hiding underneath.  The burden of cognitive overhead placed on the programmer is huge.
+
+
+* Error handling: Python example
+
+A more realistic problem:
+
+    print(fetchData())
+
+Can this throw an exception?  You have to rely on documentation.
+
+    def fetchData():
+        resp = requests.get("https://www.google.com")
+        return resp.text
+
+Oh, `fetchData()` has no documentation.
+
+: I happen to know the requests library, so I know that requests.get() can throw.  But even the docs for the library don't say that it can throw, or what it throws.
+: So I have to look at the requests library implementation.  I'm at least 2 files and 3 functions into this, and all I wanted to know is whether I had to wrap that call in try-catch and what to catch.
+: You might say, "this is a documentation" issue and you might be right.  But we all know what life is like in the real world.
+: This very simple code is *extremely* hard to reason about!
+
+
+* Error handling
+
+Go does not have exceptions.  In Go, errors are just values.
+
+Any function that _could_ fail by convention returns an `error` as its last argument.
+
+    resp, err := http.Get("https://www.google.com")
+    if err != nil {
+        // Deal with the error.  In this example, we consider it to be a fatal error
+        log.Fatalf("Error fetching from Google: %s", err)
+    }
+
+
+* Error handling
+
+Explicit error handling has some big advantages:
+
+- Linear flow of execution
+- Errors are handled immediately after where they occur
+- Lack of extra control structures (try-catch)
+
+: With try-catch, you could skip an undefined amount of code.  Contrast with the determinism of an `if` block.
+: Error handling is in your face: you have to deal with it, even if that's just passing it up the stack.  This may seem tedious, but results in more resilient software.
+
+
+* Type system
+
+Go is not an objected-oriented language in the traditional sense of _classes_.
+
+Nor is it a _prototypal_ OO language like JavaScript.
+
+In fact, Go avoids type hierarchies.
+
+: When I want to write a program, I am trying to solve a problem.  Classes and types get in the way of that by making me first design a type hierarchy before I can get any real work done.
+
+
+* Type system
+
+Whether Go is object-oriented is up for some debate.
+
+Go's literature never refers to "objects" or "instantiation."
+
+Go does not have inheritance or parametric polymorphism.
+
+Go _does_ have:
+
+- extensible user-defined types
+- composite types (structs)
+- methods
+- interfaces
+- composition of these
+
+
+* Struct & method example
+
+.play person.go
+
+
+* Struct & method example
+
+.play dog.go
+
+: Very similar.  Both the person and the dog have a Greet method that has the same signature.
+
+
+* Interface example
+
+    type Greeter interface {
+        Greet() string
+    }
+
+.play greeter.go /START OMIT/,/END OMIT/
+
+: Interfaces in Go are implicitly implemented, and they can be composed together to create richer interfaces.  This tends to lead to small interfaces that often contain only a single method.
+
+
+* Struct composition
+
+We can _embed_ structs inside other structs and access the fields and methods inside.
+
+.play trainer.go /START OMIT/,/END OMIT/
+
+
+* Memory management
+
+Go is a garbage collected language.
+
+Go has pointers, but not pointer arithmetic.
+
+Variables in Go are assigned a useful zero value when declared.
+
+Go gives control over memory layout, and everything is passed by value.
+
+Go allocates values on the stack when it can, and on the heap when it must.
+
+: Go's design allows for a relatively simple yet high-performance garbage collector
+: Go's GC is getting better with every release, with about an order of magnitude improvement in every release.
+: GC pauses are typically measured in microseconds, even with very large heaps.
+: Lack of arithmetic is a major component of safety.  No buffer overruns or accessible uninitialized memory.
+
+
+* Concurrency
+
+_Goroutines_ are independently running functions.
+
+They are a bit like threads, except they:
+
+- Live entirely within the Go runtime
+- Are very lightweight to create and destroy
+- Have very small stacks that grow as needed
+
+Most importantly, they run code linearly.
+
+You create one by prefixing a function call with `go` keyword.
+
+    go fetchData()
+
+: Go's concurrency is based on Tony Hoare's 1978 paper, Communicating Sequential Processes
+: They're so lightweight it's not uncommon to be running thousands of them in a single program
+: Independently running means that it's ok for code to block.  No blocking and non-blocking versions of every function.
+: Linear execution means that you don't have event loops and callback hell.
+
+
+* Concurrency
+
+Independently running functions need to coordinate.  This is done with _channels_.
+
+Sending on a channel:
+
+    ch <- 42
+
+Receiving from a channel:
+
+    v := <-ch
+
+Channels also synchronize.
+
+- Sending on a channel blocks until something receives on the channel
+- Receiving from a channel blocks until a sender sends on the channel
+
+: The synchronization eliminates the need for constructs like mutexes or condition variables
+: This synchronization also enables lots of interesting patterns
+
+
+* Concurrency
+
+So much more I could cover:
+
+- `select` control structure
+- Ease of fan-in and fan-out designs
+- Pipelines
+- Timeouts and backpressure
+- Orderly teardown
+
+But you'll have to come to another meetup for that. :)
+
+
+* And so much more
+
+- Multiple return values
+- Identifiers that start with a capital letter are exported
+- First class functions
+- Deferred cleanup
+- Decentralized package structure
+- Incredibly fast compilation
+- Trivial cross-compilation across OSes and architectures
+- Static binaries
+- Great tooling
+
+
+* Resources for Gophers
+
+- Tour of Go - [[https://tour.golang.org]]
+- [[http://exercism.io/languages/go/about][exercism.io]]
+- [[https://dave.cheney.net/resources-for-new-go-programmers][Dave Cheney's resources for new Go programmers]]
+- [[http://ashleymcnamara.github.io/learn_to_code/#golang][Ashley McNamara's Learn to Code Go section]]
+
+: Dave's: Books, workspace setup, editors and IDEs, tutorials, presentations, blogs
+: Ashley's: Lots of resources on other programming languages as well, and how to start programming in the first place.
+
+
+* Meetup details
+
+Attendees, Speakers, Sponsors needed!
+
+Contact me:
+
+[[https://twitter.com/joeshaw][@joeshaw]]
+[[mailto:joe@joeshaw.org][joe@joeshaw.org]]
+
+`#go` on [[https://techlife-columbus-slack.herokuapp.com/][Techlife Columbus Slack]]
+`#ohio` on [[https://invite.slack.golangbridge.org/][Gophers Slack]]
+
+[[https://twitter.com/columbusgolang][@columbusgolang]]
+[[columbusgolang.org]]

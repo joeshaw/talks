@@ -20,3 +20,7 @@ Slides from talks I have given.
 * 2016 [Columbus Code Camp](http://columbuscodecamp.com)
   - [Slide source](https://github.com/joeshaw/talks/tree/master/codecamp2016)
   - [Online slides](https://go-talks.appspot.com/github.com/joeshaw/talks/codecamp2016/concurrency.slide#1)
+
+* 2017 [GDG Columbus](https://www.meetup.com/GDG-Columbus/)
+  - [Slide source](https://github.com/joeshaw/talks/tree/master/gdgcolumbus)
+  - [Online slides](https://go-talks.appspot.com/github.com/joeshaw/talks/gdgcolumbus/go.slide#1)
